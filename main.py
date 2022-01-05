@@ -1,16 +1,8 @@
 """"""
-# Add try-excepts around everything
-# JAVASCRIPT TEMPLATES
-# USE JSON 400 FOR INVALID REQUEST
-# Remove JSON ASSERTS LATER
-# DON'T FORGET TIME LIMIT ON WAIT
-# USE ORANGE AND PINK FOR SPECIAL COLORS
 # https://replit.com/talk/ask/Heroku-CLI/19230
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import asyncio
@@ -27,16 +19,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.mount("/static", StaticFiles(directory="static"), name="static")
-app.mount("/templates", StaticFiles(directory="templates"), name="templates")
-templates = Jinja2Templates(directory="templates")
 games = {}
 events = {}
 
 
 @app.get('/', response_class=HTMLResponse)
 async def home(request: Request):
-  return templates.TemplateResponse('index.html', {**__builtins__.__dict__, **locals(), 'r': randint(0, 1000000000)})
+  return 'up'
 
 class Game():
   __slots__ = 'last_active', 'players', 'move'
@@ -55,11 +44,6 @@ class Player():
 
 
 
-# USE REVERSE() FOR PLAYER TURNS
-
-# def p(board):
-#   print('\n'.join(' '.join(str(_) for _ in row) for row in board)+'\n')
-
 def p(board):
   b = [[0]*10 for _ in range(10)]
   for y, x in board.keys():
@@ -67,23 +51,6 @@ def p(board):
     b[y][x] = 1
   print('\n'.join(' '.join(str(_) for _ in row) for row in b)+'\n')
 
-# def verify_setup(setup):
-#   try:
-#     board = [[0]*10 for _ in range(10)]
-#     for x, y, rotation, length in zip(*[iter(map(int, setup))]*3, [2, 3, 3, 4, 5]):
-#       if rotation == 0:
-#         for n in range(length):
-#           assert board[y][x+n]==0
-#           board[y][x+n] = 1
-#       else:
-#         for n in range(length):
-#           assert board[y+n][x]==0
-#           board[y+n][x] = 1
-#     p(board)
-#     return True
-#   except:
-#     p(board)
-#     return False
 
 def verify_setup(setup):
   try:
