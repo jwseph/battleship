@@ -13,7 +13,7 @@ from random import randint
 
 app = FastAPI()
 origins = [
-  'https://kamiak.org'
+  'https://kamiak.org',
   'https://beta.kamiak.org'
 ]
 app.add_middleware(
