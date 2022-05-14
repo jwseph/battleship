@@ -14,7 +14,8 @@ from random import randint
 app = FastAPI()
 origins = [
   'https://kamiak.org',
-  'https://beta.kamiak.org'
+  'https://beta.kamiak.org',
+  'https://battleship-heroku.herokuapp.com'
 ]
 app.add_middleware(
     CORSMiddleware,
