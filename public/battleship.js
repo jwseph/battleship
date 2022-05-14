@@ -144,7 +144,6 @@ $('.ship.interactive').draggable({
     if (valid) {
       $(this)
         .css('visibility', 'hidden')
-        .addClass('ship-purple')
       .parent().find('.ship-shadow')
         .css({
           visibility: 'visible',
@@ -156,7 +155,6 @@ $('.ship.interactive').draggable({
     } else {
       $(this)
         .css('visibility', 'visible')
-        .removeClass('ship-purple')
       .parent().find('.ship-shadow')
         .css('visibility', 'hidden')
         .addClass('ship-black')
@@ -169,7 +167,7 @@ $('.ship.interactive').draggable({
     var length = $(this).data('length');
     var valid = isValidShip.call(this, left, top);
 
-    $(this).css('visibility', 'visible').removeClass('ship-purple');
+    $(this).css('visibility', 'visible');
     $('.ship-shadow').css('visibility', 'hidden').addClass('ship-black');
     if (valid) {
       $(this).data({lastLeft: left, lastTop: top});
