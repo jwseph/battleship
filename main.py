@@ -1,48 +1,36 @@
 """"""
 # https://replit.com/talk/ask/Heroku-CLI/19230
 
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
+import socketio
 import uvicorn
-import asyncio
 from uuid import uuid4
-from datetime import datetime
 from random import randint
 
 
-app = FastAPI()
 origins = [
   'https://kamiak.org',
   'https://beta.kamiak.org',
   'https://battleship-heroku.herokuapp.com'
 ]
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=['*'],
-    allow_headers=['*'],
-)
+files = {
+  '/': 'public/'
+}
+socket = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
+app = socketio.ASGIApp(socket, static_files=files, socketio_path='/battleship/socket.io')
+
 games = {}
-events = {}
 
-
-@app.get('/', response_class=HTMLResponse)
-async def home(request: Request):
-  return 'up'
 
 class Game():
-  __slots__ = 'last_active', 'players', 'move'
+  __slots__ = 'players', 'move'
   def __init__(self):
-    self.last_active = int(datetime.now().timestamp())
     self.players = []
     self.move = None
 
 class Player():
-  __slots__ = 'uuid', 'setup', 'board', 'ships'
-  def __init__(self, uuid, setup):
-    self.uuid = uuid
+  __slots__ = 'sid', 'setup', 'board', 'ships'
+  def __init__(self, sid, setup):
+    self.sid = sid
     self.setup = setup
     self.board = [[0]*10 for n in range(10)]
     self.ships = ''  # Eliminated ships btw
@@ -79,18 +67,28 @@ def verify_setup(setup):
 # 000010200310900
 
 
-@app.post('/api/join', response_class=JSONResponse)
-async def join(request: Request):
+@socket.event
+async def connect(sid, environ):
+  print(sid, 'connected')
+
+
+@socket.event
+async def disconnect(sid):
+  print(sid, 'disconnected')
+  for game_id, game in list(games.items()):
+    for i in range(2):
+      if sid == game.players[i].sid:
+        await socket.emit('opponent disconnect', to=game.players[1-i].sid)
+        del games[game_id]
+        return
+
+
+@socket.event
+async def join(sid, data):
   # https://stackoverflow.com/questions/18697034/how-to-pass-parameters-in-ajax-post/35590754
 
-  json = await request.json()
-  print(json)
-  assert 'setup' in json
-  setup = json['setup']
-  uuid = uuid4().fields[-1]
-  # -1: invalid setup
-  # 0 : first player, send response to wait
-  # 1 : second player
+  assert 'setup' in data
+  setup = data['setup']
 
   if len(games) != 0 and len(list(games.values())[-1].players) < 2:
     game_id = list(games.keys())[-1]
@@ -100,63 +98,41 @@ async def join(request: Request):
   game = games[game_id]
 
   if not verify_setup(setup):
-    return JSONResponse({}, 400)
+    return {'success': False}  # invalid setup, user is editing dom
 
   if len(game.players) == 0:
-    game.players.append(Player(uuid, setup))
-    events[game_id] = asyncio.Event()
-    return JSONResponse({'game': game_id, 'uuid': uuid, 'players': 1}, 201)
+    game.players.append(Player(sid, setup))
+    return {'success': True, 'game': game_id, 'sid': sid, 'players': 1}
 
   order = randint(0, 1)
-  game.players.insert(order, Player(uuid, setup))
+  await socket.emit('opponent join', {'turn': order == 1}, to=game.players[0].sid)
+  game.players.insert(order, Player(sid, setup))
 
-  events[game_id].set()
-
-  return JSONResponse({'game': game_id, 'uuid': uuid, 'players': 2, 'turn': bool(1-order)}, 201)
-
-
-@app.post('/api/wait', response_class=JSONResponse)
-async def wait_(request: Request):
-  json = await request.json()
-  print(json)
-  assert 'game' in json and 'uuid' in json
-  game_id = json['game']
-  uuid = json['uuid']
-
-  game = games[game_id]
-  assert game.players[0].uuid == uuid  # MAYBE REMOVE
-  player = game.players[0]
-
-  try:
-    await asyncio.wait_for(events[game_id].wait(), timeout=2)
-    events[game_id] = asyncio.Event()
-    return {'success': True, 'turn': player is game.players[0]}
-  except asyncio.TimeoutError:
-    del games[game_id]
-    return {'success': False}
+  return {'success': True, 'game': game_id, 'sid': sid, 'players': 2, 'turn': bool(1-order)}
 
 
-@app.post('/api/play', response_class=JSONResponse)
-async def play(request: Request):
-  json = await request.json()
-  # print(json)
-  assert 'game' in json and 'uuid' in json and 'move' in json
-  game_id = json['game']
-  uuid = json['uuid']
-  move = json['move']
+@socket.event
+async def play(sid, data):
+  assert 'game' in data and 'move' in data
+  game_id = data['game']
+  move = data['move']
   game = games[game_id]
   player = game.players[0]
   opponent = game.players[1]
   assert len(opponent.ships) != 20  # Game must not be over
-  if player.uuid != uuid:
-    print(player.uuid, '!=', uuid)
-    game.players[0], game.players[1], player, opponent = game.players[1], game.players[0], opponent, player
-    # return
-  # assert player.uuid == uuid  # idk about remove maybe
+
+
+  # if player.sid != sid:
+  #   print(player.sid, '!=', sid)
+  #   game.players[0], game.players[1], player, opponent = game.players[1], game.players[0], opponent, player
+  #   # return
+  assert player.sid == sid  # idk about remove maybe
+
+
   print(move)
   x, y = map(int, move)
   # print(opponent.board)
-  if opponent.board[y][x] != 0: return HTMLResponse('', 400)
+  if opponent.board[y][x] != 0: return {'success': False}
   for i, sx, sy, rotation, length in zip(range(5), *[iter(map(int, opponent.setup))]*3, [2, 3, 3, 4, 5]):
     if rotation == 0:
       # Hit an x ship
@@ -179,65 +155,27 @@ async def play(request: Request):
   game.move = move, opponent.board[y][x]
   print('\n'.join(' '.join(str(_) for _ in row) for row in opponent.board))
 
-  events[game_id].set()
-  game.last_active = int(datetime.now().timestamp())
+  # Switch players, then notify new player
+  game.players[0], game.players[1], player, opponent = game.players[1], game.players[0], opponent, player
+  if len(player.ships) != 20:
+    await socket.emit('opponent play', {'move': game.move, 'ships': player.ships}, to=player.sid)
+  else:  # new player has lost
+    await socket.emit('opponent play', {'move': game.move, 'ships': player.ships, 'hiddenShips': ''.join([str(i)+opponent.setup[i*3:(i+1)*3] for i in set(range(5)).difference(set(map(int, opponent.ships[::4])))])}, to=player.sid)
 
-  # return {'move': game.move, 'board': opponent.board, 'ships': opponent.ships}
-  return {'move': game.move, 'ships': opponent.ships}
-
-
-@app.post('/api/view', response_class=JSONResponse)
-async def view(request: Request):
-  json = await request.json()
-  # print(json)
-  assert 'game' in json and 'uuid' in json
-  game_id = json['game']
-  uuid = json['uuid']
-  game = games[game_id]
-  player = game.players[0]
-  opponent = game.players[1]
-  assert len(opponent.ships) != 20  # Game must not be over
-  if opponent.uuid != uuid:
-    print(opponent.uuid, '!=', uuid)
-    game.players[0], game.players[1], player, opponent = game.players[1], game.players[0], opponent, player
-    # return
-  # assert opponent.uuid == uuid  # maybe remove NAHHH
-
-  await events[game_id].wait()
-  events[game_id] = asyncio.Event()
-  game.players[0], game.players[1] = game.players[1], game.players[0]
-
-  # return {'move': game.move, 'board': opponent.board, 'ships': opponent.ships}
-  if len(opponent.ships) != 20:
-    return {'move': game.move, 'ships': opponent.ships}
-  else:
-    return {
-      'move': game.move,
-      'ships': opponent.ships,
-      'hiddenShips': ''.join([str(i)+player.setup[i*3:(i+1)*3] for i in set(range(5)).difference(set(map(int, player.ships[::4])))])
-    }
+  return {'success': True, 'move': game.move, 'ships': player.ships}  # player.ships because since the middle of this function, opponent and player have been switched
 
 
-# async def app(scope, receive, send):
-#   """The simplest of ASGI apps, displaying scope."""
-#   headers = [(b"content-type", b"text/html")]
-#   body = pretty_html_bytes(scope)
-#   await asyncio.sleep(1)
-#   await send({"type": "http.response.start", "status": 200, "headers": headers})
-#   await send({"type": "http.response.body", "body": body})
-
-
-from threading import Thread
-def a():
-  while True:
-    try:
-      print(globals()[input()])
-    except Exception as e:
-      print(e);
-    # print(verify_setup(input()))
-t = Thread(target=a)
-t.daemon=True
-t.start()
+# from threading import Thread
+# def a():
+#   while True:
+#     try:
+#       print(globals()[input()])
+#     except Exception as e:
+#       print(e);
+#     # print(verify_setup(input()))
+# t = Thread(target=a)
+# t.daemon=True
+# t.start()
 
 if __name__ == "__main__":
   uvicorn.run(app, host="0.0.0.0", port=80)
