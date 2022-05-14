@@ -76,9 +76,9 @@ async def connect(sid, environ):
 async def disconnect(sid):
   print(sid, 'disconnected')
   for game_id, game in list(games.items()):
-    for i in range(2):
+    for i in range(len(game.players)):
       if sid == game.players[i].sid:
-        await socket.emit('opponent disconnect', to=game.players[1-i].sid)
+        if len(game.players) > 1: await socket.emit('opponent disconnect', to=game.players[1-i].sid)
         del games[game_id]
         return
 
