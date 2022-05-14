@@ -7,12 +7,13 @@ from random import randint
 origins = [
   'https://kamiak.org',
   'https://beta.kamiak.org',
-  'https://battleship-heroku.herokuapp.com'
+  'https://battleship-heroku.herokuapp.com',
+  'https://kamiakhs.github.io'
 ]
 files = {
   '/': 'public/'
 }
-socket = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
+socket = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins=origins)
 app = socketio.ASGIApp(socket, static_files=files, socketio_path='/battleship/socket.io')
 
 games = {}
