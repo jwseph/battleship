@@ -65,7 +65,7 @@ socket.on('opponent disconnect', () => {
   if (gameStatus && $('#play').css('display') != 'none') {
     gameStatus = false;
     blockAimer = true;
-    $('#banner').text("Opponent has disconnected.").addClass('win');
+    $('#banner').text("Opponent has disconnected. You won!").addClass('win');
     $('#rematch-button').css('display', 'block');
   }
 })

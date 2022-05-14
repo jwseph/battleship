@@ -672,7 +672,7 @@
           </tbody>
         </table>
       </div>
-      <button id="rematch-button" style="display:none">Rematch</button>
+      <button id="rematch-button" style="display:none">Play again</button>
     </div>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
@@ -743,7 +743,7 @@
           if (gameStatus && $('#play').css('display') != 'none') {
             gameStatus = false;
             blockAimer = true;
-            $('#banner').text("Opponent has disconnected.").addClass('win');
+            $('#banner').text("Opponent has disconnected. You won!").addClass('win');
             $('#rematch-button').css('display', 'block');
           }
         })
