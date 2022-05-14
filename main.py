@@ -178,7 +178,7 @@ async def play(sid, data):
 # t.start()
 
 if __name__ == "__main__":
-  uvicorn.run(app, host="0.0.0.0", port=80)
+  uvicorn.run(app, host="0.0.0.0", port=80, access_log=False)
 
 # https://www.uvicorn.org/
 # https://github.com/tiangolo/fastapi
