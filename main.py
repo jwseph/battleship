@@ -1,6 +1,3 @@
-""""""
-# https://replit.com/talk/ask/Heroku-CLI/19230
-
 import socketio
 import uvicorn
 from uuid import uuid4
@@ -121,13 +118,11 @@ async def play(sid, data):
   opponent = game.players[1]
   assert len(opponent.ships) != 20  # Game must not be over
 
-
   # if player.sid != sid:
   #   print(player.sid, '!=', sid)
   #   game.players[0], game.players[1], player, opponent = game.players[1], game.players[0], opponent, player
   #   # return
   assert player.sid == sid  # idk about remove maybe
-
 
   print(move)
   x, y = map(int, move)
@@ -164,18 +159,6 @@ async def play(sid, data):
 
   return {'success': True, 'move': game.move, 'ships': player.ships}  # player.ships because since the middle of this function, opponent and player have been switched
 
-
-# from threading import Thread
-# def a():
-#   while True:
-#     try:
-#       print(globals()[input()])
-#     except Exception as e:
-#       print(e);
-#     # print(verify_setup(input()))
-# t = Thread(target=a)
-# t.daemon=True
-# t.start()
 
 if __name__ == "__main__":
   uvicorn.run(app, host="0.0.0.0", port=80, access_log=False)

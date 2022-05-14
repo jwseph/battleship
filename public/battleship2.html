@@ -1,0 +1,684 @@
+<!DOCTYPE HTML>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Battleship</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" media="print" onload="this.onload=null;this.removeAttribute('media');" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500&display=swap">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Play Battleship online with your friends during school! Try to sink their ships before they sink yours!">
+    <style>
+      .clearfix::after {
+        content: "";
+        clear: both;
+        display: table;
+      }
+      /* https://material.io/archive/guidelines/style/color.html#color-themes */
+      * {
+        touch-action: manipulation;
+        outline: none;
+        transition: background 0.15s, color 0.15s, box-shadow 0.15s, border 0.15s, opacity 0.15s;
+        transition-timing-function: cubic-bezier(.25,.1,.25,1);
+        -webkit-user-select: none;
+           -moz-user-select: none;
+            -ms-user-select: none;
+                user-select: none;
+      }
+      body {
+        font-size: 32px;
+        font-family: Outfit, Arial, sans-serif;
+        font-feature-settings: "lnum";
+        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+      #title {
+        position: relative;
+        text-align: center;
+        font-family: Outfit, Arial, sans-serif;
+        font-size: 36px;
+        width: fit-content;
+        margin: 35px auto -13px auto;
+        cursor: pointer;
+        padding: 0 8px;
+        height: 56px;
+        line-height: 1.4em;
+        transition: 0.15s, padding 0.1s, opacity 0.1s;
+        z-index: 1;
+      }
+      #title:hover{ opacity: 0.9; }
+      #banner-container {
+        text-align: center;
+        margin-bottom: 43.25px;
+      }
+      #banner {
+        display: inline-block;
+        font-size: 12px;
+        letter-spacing: .0125em;
+        padding: 5px 9px;
+        border-radius: 8px;
+        min-width: 100px;
+        transition: 0.15s;
+      }
+      #banner.win {
+        background: rgba(26 255 87 / 55%);
+        box-shadow: 0 0 10px rgba(26 255 87 / 32%);
+      }
+      #banner.lose {
+        background: rgba(255 28 73 / 55%);
+        box-shadow: 0 0 10px rgba(255 28 73 / 32%);
+      }
+      button {
+        display: block;
+        margin: 32px auto 0 auto;
+        font-family: Outfit, Arial, sans-serif;
+        font-size: 17px;
+        padding: 0.6em 1.2em;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+      }
+      button.blocked { cursor: auto; }
+      button.forced, button.blocked { cursor: auto; }
+      .ui-draggable { cursor: move; }
+      .ui-draggable-disabled { cursor: auto; }
+      .ship, .ship-shadow, .port-ship { border-radius: 0.5em; }
+      .ship {
+        position: absolute;
+        margin: -2.0px;
+        z-index: 1;
+      }
+      .ship-shadow, #aimer {
+        position: absolute;
+        margin: -2.0px;
+        z-index: 3;
+      }
+      .ship-shadow, #aimer, .ship.ship-purple {
+        border: 3px solid slateblue;
+        background: rgba(106 90 205 / 5%);
+        box-shadow: 0 0 2px rgba(106 90 205 / 50%), inset 0 0 2px rgba(106 90 205 / 50%);
+        transition: none;
+      }
+      .ship.shaking, .ship.hit {
+        border: 3px solid crimson;
+        background: rgba(220 20 60 / 5%);
+        box-shadow: 0 0 2px rgba(220 20 60 / 50%), inset 0 0 2px rgba(220 20 60 / 50%);
+        z-index: 2;
+      }
+      #aimer {
+        width: calc(1em - 3px);
+        height: calc(1em - 3px);
+        cursor: pointer;
+      }
+      .cruiser.v, .submarine.v                 { width: calc(1em - 3px); height: calc(3em - 3px); }
+      .cruiser.h, .submarine.h                 { width: calc(3em - 3px); height: calc(1em - 3px); }
+      .carrier.v                               { width: calc(1em - 3px); height: calc(5em - 3px); }
+      .carrier.h                               { width: calc(5em - 3px); height: calc(1em - 3px); }
+      .battleship.v                            { width: calc(1em - 3px); height: calc(4em - 3px); }
+      .battleship.h                            { width: calc(4em - 3px); height: calc(1em - 3px); }
+      .ptboat.v                                { width: calc(1em - 3px); height: calc(2em - 3px); }
+      .ptboat.h                                { width: calc(2em - 3px); height: calc(1em - 3px); }
+      .port-ship.cruiser, .port-ship.submarine { width: calc(1em - 1px); height: calc(3em - 1px); }
+      .port-ship.carrier                       { width: calc(1em - 1px); height: calc(5em - 1px); }
+      .port-ship.battleship                    { width: calc(1em - 1px); height: calc(4em - 1px); }
+      .port-ship.ptboat                        { width: calc(1em - 1px); height: calc(2em - 1px); }
+      .port-ship.submarine                     { width: calc(1em - 1px); height: calc(3em - 1px); }
+      .port {
+        display: block;
+        width: auto;
+        height: auto;
+        padding: 0 0.125rem;
+        position: absolute;
+        margin-top: -0.55em;
+        margin-left: -4em;
+      }
+      .port-line {
+        margin: 0;
+        padding: 0 0.125em;
+      }
+      .port-ship {
+        padding: 0;
+        margin: 0.25em 0;
+      }
+      table {
+        border-spacing: 0;
+      }
+      .battlefield-table {
+        border-spacing: 0;
+        border-collapse: collapse;
+        box-sizing: border-box;
+      }
+      .battlefield-body {
+        width: 10em;
+        min-width: 10em;
+        height: 10em;
+      }
+      .battlefield-row {
+        width: 10em;
+        min-width: 10em;
+        height: 1em;
+      }
+      .battlefield-cell {
+        display: table-cell;
+        box-sizing: border-box;
+        min-width: 1em;
+        height: 1em;
+        padding: 0;
+        position: relative;
+      }
+      .battlefield-cell[data-x="0"][data-y="0"] { border-top-left-radius: 0.5em; }
+      .battlefield-cell[data-x="9"][data-y="0"] { border-top-right-radius: 0.5em; }
+      .battlefield-cell[data-x="9"][data-y="9"] { border-bottom-right-radius: 0.5em; }
+      .battlefield-cell[data-x="0"][data-y="9"] { border-bottom-left-radius: 0.5em; }
+      .battlefield-cell.miss > .battlefield-dot, .battlefield-cell.hit > .battlefield-dot, .battlefield-cell.hit-ship > .battlefield-dot {
+        position: absolute;
+        width: 8px;
+        height: 8px;
+        left: calc(50% - 4px);
+        top: calc(50% - 4px);
+        border-radius: 50%;
+      }
+      .battlefield-cell.miss { background: rgba(169 169 169 / 5%); }
+      .battlefield-cell.miss.move { background: rgba(169 169 169 / 10%); }
+      .battlefield-cell.miss > .battlefield-dot { background: darkgray; box-shadow: 0 0 2px rgba(169 169 169 / 50%); }
+      .battlefield-cell.hit, .battlefield-cell.hit-ship { background: rgba(220 20 60 / 5%); }
+      .battlefield-cell.hit.move, .battlefield-cell.hit-ship.move { background: rgba(220 20 60 / 10%); }
+      .battlefield-cell.hit > .battlefield-dot, .battlefield-cell.hit-ship > .battlefield-dot {
+        background: crimson;
+        box-shadow: 0 0 2px rgba(220 20 60 / 50%);
+      }
+      .battlefield-cell.hit-ship.v { border-bottom: 1px solid rgb(220 20 60 / 50%); }
+      .battlefield-cell.hit-ship.h { border-right:  1px solid rgb(220 20 60 / 50%); }
+      .h-marker, .v-marker, .label { position: absolute; }
+      .h-marker, .v-marker {
+        width: 0.5em;
+        padding: 0;
+        font-size: 12px;
+      }
+      .h-marker {
+        width: 32px;
+        height: 32px;
+        line-height: 33px;
+        margin-left: -44px;
+        margin-top: -16px;
+        text-align: right;
+      }
+      .v-marker {
+        width: 32px;
+        display: block;
+        margin-top: -3.25em;
+        text-align: center;
+      }
+      .label {
+        width: 319px;
+        height: 32px;
+        top: 336px;
+        font-size: 12px;
+        text-align: center;
+        padding: 0;
+      }
+    </style>
+    <style id="light">
+      :root { color-scheme: light; }
+      body { background: white; }
+      #title { color: black; text-shadow: 1px 1px 2px rgba(0 0 0 / 24%); }
+      #title:hover { padding: 0 2px 0 14px; }
+      #banner { color: #3c4043; background: #e1e3e6; text-shadow: 0 0 1px rgba(60 64 67 / 50%); }
+      button { color: white; background: black; }
+      button:hover, button.forced { background: #191919; box-shadow: 0 1px 5px 1px rgb(25 25 25 / 32%); }
+      button:active, button.forced { background: #323232; }
+      button.blocked { color: #a0a5ad; background: #d5d7db; box-shadow: none; }
+      .ui-draggable-dragging { box-shadow: 0 0 20px rgb(0 2 5 / 10%); }
+      .ship { border: 3px solid black; background: rgba(0 2 5 / 5%); box-shadow: 0 0 2px rgb(0 2 5 / 50%), inset 0 0 2px rgb(0 2 5 / 50%); }
+      .ship-shadow.ship-black { border: 3px solid black; background: rgba(0 2 5 / 5%); box-shadow: 0 0 2px rgb(0 2 5 / 50%), inset 0 0 2px rgb(0 2 5 / 50%); }
+      .port-ship, .battlefield-cell                                                               { box-shadow: inset 0.5px 1px 2px rgba(196 196 201 / 0.933); background: rgba(196 196 201 / 0.067); border: 1px solid rgba(196 196 201 / 0); }
+      .battlefield-table.transparent .battlefield-cell, .battlefield-table.transparent .port-ship { box-shadow: inset 0.5px 1px 2px rgba(196 196 201 / 0.373); background: rgba(196 196 201 / 0.027); }
+      .h-marker, .v-marker, .label { color: #5d5d5e; }
+    </style>
+    <style id="dark">
+      :root { color-scheme: dark; }
+      body { background: #202124; }
+      #title { color: white; text-shadow: 0 0 4px rgba(255 255 255 / 32%); }
+      #title:hover { padding: 0 14px 0 2px; }
+      #banner { color: #e8eaed; background: #3d3f43; text-shadow: 0 0 2px rgba(232 234 237 / 50%); }
+      button { color: #202124; background: #e8eaed; }
+      button:hover, button.forced { background: #bcc0c3; box-shadow: 0 1px 5px 1px rgb(0 0 0 / 32%); }
+      button:active, button.forced { background: #757b80; }
+      button.blocked { color: #757b80; background: #303134; box-shadow: none; }
+      .ui-draggable-dragging { box-shadow: 0 0 20px rgb(232 234 237 / 10%); }
+      .ship { border: 3px solid #e8eaed; background: rgba(232 234 237 / 5%); box-shadow: 0 0 2px rgb(232 234 237 / 50%), inset 0 0 2px rgb(232 234 237 / 50%); }
+      .ship-shadow.ship-black { border: 3px solid #e8eaed; background: rgba(232 234 237 / 5%); box-shadow: 0 0 2px rgb(232 234 237 / 50%), inset 0 0 2px rgb(232 234 237 / 50%); }
+      .port-ship, .battlefield-cell                                                               { box-shadow: inset 0.5px 1px 2px rgba(11 11 11 / 0.933); background: rgba(11 11 11 / 0.067); border: 1px solid rgba(11 11 11 / 0); }
+      .battlefield-table.transparent .battlefield-cell, .battlefield-table.transparent .port-ship { box-shadow: inset 0.5px 1px 1px rgba(11 11 11 / 0.373); background: rgba(11 11 11 / 0.027); }
+      .h-marker, .v-marker, .label { color: #4e5153; }
+    </style>
+    <script>
+      if (!localStorage.dark) document.getElementById('dark').disabled = true;
+      else document.getElementById('light').disabled = true;
+    </script>
+  </head>
+  <body>
+    <div id="heading" style="min-width:990px; max-width:1080px; margin:0 auto; visibility:hidden">
+      <h3 id="title">Battleship</h3>
+      <div id="banner-container"><p id="banner">Place your ships, then click to rotate.</p></div>
+    </div>
+    <div id="setup" style="min-width:990px; max-width:1080px; margin:0 auto; visibility:hidden">
+      <table class="battlefield-table" style="margin:0 auto">
+        <tbody class="battlefield-body">
+          <tr class="battlefield-row">
+            <td class="battlefield-cell" data-x="0" data-y="0"><div class="battlefield-dot"></div>
+              <div class="port">
+                <div class="port-line clearfix" style="float:left">
+                  <div class="port-ship cruiser v">
+                    <div class="ship interactive cruiser v"></div>
+                    <div class="ship-shadow cruiser v" style="visibility:hidden"></div>
+                  </div>
+                  <div class="port-ship carrier v">
+                    <div class="ship interactive carrier v"></div>
+                    <div class="ship-shadow carrier v" style="visibility:hidden"></div>
+                  </div>
+                </div>
+                <div class="port-line clearfix" style="float:right">
+                  <div class="port-ship battleship v">
+                    <div class="ship interactive battleship v"></div>
+                    <div class="ship-shadow battleship v" style="visibility:hidden"></div>
+                  </div>
+                  <div class="port-ship ptboat v">
+                    <div class="ship interactive ptboat v"></div>
+                    <div class="ship-shadow ptboat v" style="visibility:hidden"></div>
+                  </div>
+                  <div class="port-ship submarine v">
+                    <div class="ship interactive submarine v"></div>
+                    <div class="ship-shadow submarine v" style="visibility:hidden"></div>
+                  </div>
+                </div>
+              </div>
+              <!-- <div class="label">Your grid</div> -->
+              <div class="h-marker">A</div><div class="v-marker">1</div>
+            </td>
+            <td class="battlefield-cell" data-x="1" data-y="0"><div class="battlefield-dot"></div><div class="v-marker">2</div></td>
+            <td class="battlefield-cell" data-x="2" data-y="0"><div class="battlefield-dot"></div><div class="v-marker">3</div></td>
+            <td class="battlefield-cell" data-x="3" data-y="0"><div class="battlefield-dot"></div><div class="v-marker">4</div></td>
+            <td class="battlefield-cell" data-x="4" data-y="0"><div class="battlefield-dot"></div><div class="v-marker">5</div></td>
+            <td class="battlefield-cell" data-x="5" data-y="0"><div class="battlefield-dot"></div><div class="v-marker">6</div></td>
+            <td class="battlefield-cell" data-x="6" data-y="0"><div class="battlefield-dot"></div><div class="v-marker">7</div></td>
+            <td class="battlefield-cell" data-x="7" data-y="0"><div class="battlefield-dot"></div><div class="v-marker">8</div></td>
+            <td class="battlefield-cell" data-x="8" data-y="0"><div class="battlefield-dot"></div><div class="v-marker">9</div></td>
+            <td class="battlefield-cell" data-x="9" data-y="0"><div class="battlefield-dot"></div><div class="v-marker">10</div></td>
+          </tr>
+          <tr class="battlefield-row">
+            <td class="battlefield-cell" data-x="0" data-y="1"><div class="battlefield-dot"></div><div class="h-marker">B</div></td>
+            <td class="battlefield-cell" data-x="1" data-y="1"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="2" data-y="1"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="3" data-y="1"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="4" data-y="1"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="5" data-y="1"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="6" data-y="1"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="7" data-y="1"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="8" data-y="1"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="9" data-y="1"><div class="battlefield-dot"></div></td>
+          </tr>
+          <tr class="battlefield-row">
+            <td class="battlefield-cell" data-x="0" data-y="2"><div class="battlefield-dot"></div><div class="h-marker">C</div></td>
+            <td class="battlefield-cell" data-x="1" data-y="2"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="2" data-y="2"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="3" data-y="2"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="4" data-y="2"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="5" data-y="2"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="6" data-y="2"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="7" data-y="2"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="8" data-y="2"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="9" data-y="2"><div class="battlefield-dot"></div></td>
+          </tr>
+          <tr class="battlefield-row">
+            <td class="battlefield-cell" data-x="0" data-y="3"><div class="battlefield-dot"></div><div class="h-marker">D</div></td>
+            <td class="battlefield-cell" data-x="1" data-y="3"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="2" data-y="3"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="3" data-y="3"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="4" data-y="3"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="5" data-y="3"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="6" data-y="3"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="7" data-y="3"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="8" data-y="3"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="9" data-y="3"><div class="battlefield-dot"></div></td>
+          </tr>
+          <tr class="battlefield-row">
+            <td class="battlefield-cell" data-x="0" data-y="4"><div class="battlefield-dot"></div><div class="h-marker">E</div></td>
+            <td class="battlefield-cell" data-x="1" data-y="4"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="2" data-y="4"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="3" data-y="4"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="4" data-y="4"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="5" data-y="4"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="6" data-y="4"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="7" data-y="4"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="8" data-y="4"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="9" data-y="4"><div class="battlefield-dot"></div></td>
+          </tr>
+          <tr class="battlefield-row">
+            <td class="battlefield-cell" data-x="0" data-y="5"><div class="battlefield-dot"></div><div class="h-marker">F</div></td>
+            <td class="battlefield-cell" data-x="1" data-y="5"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="2" data-y="5"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="3" data-y="5"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="4" data-y="5"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="5" data-y="5"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="6" data-y="5"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="7" data-y="5"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="8" data-y="5"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="9" data-y="5"><div class="battlefield-dot"></div></td>
+          </tr>
+          <tr class="battlefield-row">
+            <td class="battlefield-cell" data-x="0" data-y="6"><div class="battlefield-dot"></div><div class="h-marker">G</div></td>
+            <td class="battlefield-cell" data-x="1" data-y="6"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="2" data-y="6"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="3" data-y="6"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="4" data-y="6"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="5" data-y="6"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="6" data-y="6"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="7" data-y="6"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="8" data-y="6"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="9" data-y="6"><div class="battlefield-dot"></div></td>
+          </tr>
+          <tr class="battlefield-row">
+            <td class="battlefield-cell" data-x="0" data-y="7"><div class="battlefield-dot"></div><div class="h-marker">H</div></td>
+            <td class="battlefield-cell" data-x="1" data-y="7"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="2" data-y="7"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="3" data-y="7"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="4" data-y="7"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="5" data-y="7"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="6" data-y="7"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="7" data-y="7"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="8" data-y="7"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="9" data-y="7"><div class="battlefield-dot"></div></td>
+          </tr>
+          <tr class="battlefield-row">
+            <td class="battlefield-cell" data-x="0" data-y="8"><div class="battlefield-dot"></div><div class="h-marker">I</div></td>
+            <td class="battlefield-cell" data-x="1" data-y="8"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="2" data-y="8"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="3" data-y="8"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="4" data-y="8"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="5" data-y="8"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="6" data-y="8"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="7" data-y="8"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="8" data-y="8"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="9" data-y="8"><div class="battlefield-dot"></div></td>
+          </tr>
+          <tr class="battlefield-row">
+            <td class="battlefield-cell" data-x="0" data-y="9"><div class="battlefield-dot"></div><div class="h-marker">J</div></td>
+            <td class="battlefield-cell" data-x="1" data-y="9"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="2" data-y="9"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="3" data-y="9"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="4" data-y="9"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="5" data-y="9"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="6" data-y="9"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="7" data-y="9"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="8" data-y="9"><div class="battlefield-dot"></div></td>
+            <td class="battlefield-cell" data-x="9" data-y="9"><div class="battlefield-dot"></div></td>
+          </tr>
+        </tbody>
+      </table>
+      <button id="play-button" class="blocked">Play</button>
+    </div>
+
+
+    <div id="play" style="min-width:990px; max-width:1080px; margin:0 auto; display:none; text-align:center">
+      <div class="clearfix" style="margin:0 auto; width:auto; max-width:733px">
+        <table class="battlefield-table player" style="float:left">
+          <tbody class="battlefield-body">
+            <tr class="battlefield-row">
+              <td class="battlefield-cell" data-x="0" data-y="0"><div class="battlefield-dot"></div><div class="label">Your grid</div><div class="h-marker">A</div><div class="v-marker">1</div></td>
+              <td class="battlefield-cell" data-x="1" data-y="0"><div class="battlefield-dot"></div><div class="v-marker">2</div></td>
+              <td class="battlefield-cell" data-x="2" data-y="0"><div class="battlefield-dot"></div><div class="v-marker">3</div></td>
+              <td class="battlefield-cell" data-x="3" data-y="0"><div class="battlefield-dot"></div><div class="v-marker">4</div></td>
+              <td class="battlefield-cell" data-x="4" data-y="0"><div class="battlefield-dot"></div><div class="v-marker">5</div></td>
+              <td class="battlefield-cell" data-x="5" data-y="0"><div class="battlefield-dot"></div><div class="v-marker">6</div></td>
+              <td class="battlefield-cell" data-x="6" data-y="0"><div class="battlefield-dot"></div><div class="v-marker">7</div></td>
+              <td class="battlefield-cell" data-x="7" data-y="0"><div class="battlefield-dot"></div><div class="v-marker">8</div></td>
+              <td class="battlefield-cell" data-x="8" data-y="0"><div class="battlefield-dot"></div><div class="v-marker">9</div></td>
+              <td class="battlefield-cell" data-x="9" data-y="0"><div class="battlefield-dot"></div><div class="v-marker">10</div></td>
+            </tr>
+            <tr class="battlefield-row">
+              <td class="battlefield-cell" data-x="0" data-y="1"><div class="battlefield-dot"></div><div class="h-marker">B</div></td>
+              <td class="battlefield-cell" data-x="1" data-y="1"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="2" data-y="1"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="3" data-y="1"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="4" data-y="1"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="5" data-y="1"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="6" data-y="1"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="7" data-y="1"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="8" data-y="1"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="9" data-y="1"><div class="battlefield-dot"></div></td>
+            </tr>
+            <tr class="battlefield-row">
+              <td class="battlefield-cell" data-x="0" data-y="2"><div class="battlefield-dot"></div><div class="h-marker">C</div></td>
+              <td class="battlefield-cell" data-x="1" data-y="2"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="2" data-y="2"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="3" data-y="2"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="4" data-y="2"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="5" data-y="2"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="6" data-y="2"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="7" data-y="2"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="8" data-y="2"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="9" data-y="2"><div class="battlefield-dot"></div></td>
+            </tr>
+            <tr class="battlefield-row">
+              <td class="battlefield-cell" data-x="0" data-y="3"><div class="battlefield-dot"></div><div class="h-marker">D</div></td>
+              <td class="battlefield-cell" data-x="1" data-y="3"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="2" data-y="3"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="3" data-y="3"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="4" data-y="3"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="5" data-y="3"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="6" data-y="3"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="7" data-y="3"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="8" data-y="3"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="9" data-y="3"><div class="battlefield-dot"></div></td>
+            </tr>
+            <tr class="battlefield-row">
+              <td class="battlefield-cell" data-x="0" data-y="4"><div class="battlefield-dot"></div><div class="h-marker">E</div></td>
+              <td class="battlefield-cell" data-x="1" data-y="4"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="2" data-y="4"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="3" data-y="4"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="4" data-y="4"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="5" data-y="4"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="6" data-y="4"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="7" data-y="4"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="8" data-y="4"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="9" data-y="4"><div class="battlefield-dot"></div></td>
+            </tr>
+            <tr class="battlefield-row">
+              <td class="battlefield-cell" data-x="0" data-y="5"><div class="battlefield-dot"></div><div class="h-marker">F</div></td>
+              <td class="battlefield-cell" data-x="1" data-y="5"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="2" data-y="5"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="3" data-y="5"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="4" data-y="5"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="5" data-y="5"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="6" data-y="5"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="7" data-y="5"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="8" data-y="5"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="9" data-y="5"><div class="battlefield-dot"></div></td>
+            </tr>
+            <tr class="battlefield-row">
+              <td class="battlefield-cell" data-x="0" data-y="6"><div class="battlefield-dot"></div><div class="h-marker">G</div></td>
+              <td class="battlefield-cell" data-x="1" data-y="6"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="2" data-y="6"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="3" data-y="6"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="4" data-y="6"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="5" data-y="6"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="6" data-y="6"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="7" data-y="6"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="8" data-y="6"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="9" data-y="6"><div class="battlefield-dot"></div></td>
+            </tr>
+            <tr class="battlefield-row">
+              <td class="battlefield-cell" data-x="0" data-y="7"><div class="battlefield-dot"></div><div class="h-marker">H</div></td>
+              <td class="battlefield-cell" data-x="1" data-y="7"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="2" data-y="7"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="3" data-y="7"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="4" data-y="7"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="5" data-y="7"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="6" data-y="7"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="7" data-y="7"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="8" data-y="7"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="9" data-y="7"><div class="battlefield-dot"></div></td>
+            </tr>
+            <tr class="battlefield-row">
+              <td class="battlefield-cell" data-x="0" data-y="8"><div class="battlefield-dot"></div><div class="h-marker">I</div></td>
+              <td class="battlefield-cell" data-x="1" data-y="8"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="2" data-y="8"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="3" data-y="8"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="4" data-y="8"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="5" data-y="8"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="6" data-y="8"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="7" data-y="8"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="8" data-y="8"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="9" data-y="8"><div class="battlefield-dot"></div></td>
+            </tr>
+            <tr class="battlefield-row">
+              <td class="battlefield-cell" data-x="0" data-y="9"><div class="battlefield-dot"></div><div class="h-marker">J</div></td>
+              <td class="battlefield-cell" data-x="1" data-y="9"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="2" data-y="9"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="3" data-y="9"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="4" data-y="9"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="5" data-y="9"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="6" data-y="9"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="7" data-y="9"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="8" data-y="9"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="9" data-y="9"><div class="battlefield-dot"></div></td>
+            </tr>
+          </tbody>
+        </table>
+        <table class="battlefield-table opponent" style="float:right">
+          <tbody class="battlefield-body">
+            <tr class="battlefield-row">
+              <td class="battlefield-cell" data-x="0" data-y="0"><div class="battlefield-dot"></div>
+                <div id="aimer" style="display: none; left: 0em; top: 0em;"></div>
+                <div class="label">Opponent's grid</div>
+                <div class="h-marker">A</div><div class="v-marker">1</div>
+              </td>
+              <td class="battlefield-cell" data-x="1" data-y="0"><div class="battlefield-dot"></div><div class="v-marker">2</div></td>
+              <td class="battlefield-cell" data-x="2" data-y="0"><div class="battlefield-dot"></div><div class="v-marker">3</div></td>
+              <td class="battlefield-cell" data-x="3" data-y="0"><div class="battlefield-dot"></div><div class="v-marker">4</div></td>
+              <td class="battlefield-cell" data-x="4" data-y="0"><div class="battlefield-dot"></div><div class="v-marker">5</div></td>
+              <td class="battlefield-cell" data-x="5" data-y="0"><div class="battlefield-dot"></div><div class="v-marker">6</div></td>
+              <td class="battlefield-cell" data-x="6" data-y="0"><div class="battlefield-dot"></div><div class="v-marker">7</div></td>
+              <td class="battlefield-cell" data-x="7" data-y="0"><div class="battlefield-dot"></div><div class="v-marker">8</div></td>
+              <td class="battlefield-cell" data-x="8" data-y="0"><div class="battlefield-dot"></div><div class="v-marker">9</div></td>
+              <td class="battlefield-cell" data-x="9" data-y="0"><div class="battlefield-dot"></div><div class="v-marker">10</div></td>
+            </tr>
+            <tr class="battlefield-row">
+              <td class="battlefield-cell" data-x="0" data-y="1"><div class="battlefield-dot"></div><div class="h-marker">B</div></td>
+              <td class="battlefield-cell" data-x="1" data-y="1"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="2" data-y="1"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="3" data-y="1"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="4" data-y="1"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="5" data-y="1"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="6" data-y="1"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="7" data-y="1"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="8" data-y="1"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="9" data-y="1"><div class="battlefield-dot"></div></td>
+            </tr>
+            <tr class="battlefield-row">
+              <td class="battlefield-cell" data-x="0" data-y="2"><div class="battlefield-dot"></div><div class="h-marker">C</div></td>
+              <td class="battlefield-cell" data-x="1" data-y="2"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="2" data-y="2"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="3" data-y="2"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="4" data-y="2"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="5" data-y="2"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="6" data-y="2"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="7" data-y="2"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="8" data-y="2"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="9" data-y="2"><div class="battlefield-dot"></div></td>
+            </tr>
+            <tr class="battlefield-row">
+              <td class="battlefield-cell" data-x="0" data-y="3"><div class="battlefield-dot"></div><div class="h-marker">D</div></td>
+              <td class="battlefield-cell" data-x="1" data-y="3"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="2" data-y="3"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="3" data-y="3"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="4" data-y="3"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="5" data-y="3"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="6" data-y="3"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="7" data-y="3"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="8" data-y="3"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="9" data-y="3"><div class="battlefield-dot"></div></td>
+            </tr>
+            <tr class="battlefield-row">
+              <td class="battlefield-cell" data-x="0" data-y="4"><div class="battlefield-dot"></div><div class="h-marker">E</div></td>
+              <td class="battlefield-cell" data-x="1" data-y="4"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="2" data-y="4"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="3" data-y="4"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="4" data-y="4"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="5" data-y="4"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="6" data-y="4"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="7" data-y="4"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="8" data-y="4"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="9" data-y="4"><div class="battlefield-dot"></div></td>
+            </tr>
+            <tr class="battlefield-row">
+              <td class="battlefield-cell" data-x="0" data-y="5"><div class="battlefield-dot"></div><div class="h-marker">F</div></td>
+              <td class="battlefield-cell" data-x="1" data-y="5"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="2" data-y="5"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="3" data-y="5"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="4" data-y="5"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="5" data-y="5"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="6" data-y="5"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="7" data-y="5"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="8" data-y="5"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="9" data-y="5"><div class="battlefield-dot"></div></td>
+            </tr>
+            <tr class="battlefield-row">
+              <td class="battlefield-cell" data-x="0" data-y="6"><div class="battlefield-dot"></div><div class="h-marker">G</div></td>
+              <td class="battlefield-cell" data-x="1" data-y="6"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="2" data-y="6"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="3" data-y="6"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="4" data-y="6"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="5" data-y="6"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="6" data-y="6"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="7" data-y="6"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="8" data-y="6"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="9" data-y="6"><div class="battlefield-dot"></div></td>
+            </tr>
+            <tr class="battlefield-row">
+              <td class="battlefield-cell" data-x="0" data-y="7"><div class="battlefield-dot"></div><div class="h-marker">H</div></td>
+              <td class="battlefield-cell" data-x="1" data-y="7"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="2" data-y="7"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="3" data-y="7"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="4" data-y="7"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="5" data-y="7"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="6" data-y="7"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="7" data-y="7"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="8" data-y="7"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="9" data-y="7"><div class="battlefield-dot"></div></td>
+            </tr>
+            <tr class="battlefield-row">
+              <td class="battlefield-cell" data-x="0" data-y="8"><div class="battlefield-dot"></div><div class="h-marker">I</div></td>
+              <td class="battlefield-cell" data-x="1" data-y="8"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="2" data-y="8"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="3" data-y="8"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="4" data-y="8"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="5" data-y="8"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="6" data-y="8"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="7" data-y="8"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="8" data-y="8"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="9" data-y="8"><div class="battlefield-dot"></div></td>
+            </tr>
+            <tr class="battlefield-row">
+              <td class="battlefield-cell" data-x="0" data-y="9"><div class="battlefield-dot"></div><div class="h-marker">J</div></td>
+              <td class="battlefield-cell" data-x="1" data-y="9"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="2" data-y="9"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="3" data-y="9"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="4" data-y="9"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="5" data-y="9"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="6" data-y="9"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="7" data-y="9"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="8" data-y="9"><div class="battlefield-dot"></div></td>
+              <td class="battlefield-cell" data-x="9" data-y="9"><div class="battlefield-dot"></div></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <button id="rematch-button" style="display:none">Rematch</button>
+    </div>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/socketio/socket.io@4.4.1/client-dist/socket.io.min.js"></script>
+    <script src="/battleship.js"></script>
+  </body>
+</html>
