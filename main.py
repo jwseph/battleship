@@ -8,7 +8,9 @@ origins = [
   'https://kamiak.org',
   'https://beta.kamiak.org',
   'https://battleship-heroku.herokuapp.com',
-  'https://kamiakhs.github.io'
+  'https://kamiakhs.github.io',
+  'https://battleship.kamiak.org',
+  'http://localhost',
 ]
 files = {
   '/': 'public/'
