@@ -1,4 +1,4 @@
-# battleship
+# Battleship - my first website!
 
 https://kamiak.org/battleship
 
